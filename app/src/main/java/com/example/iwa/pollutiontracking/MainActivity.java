@@ -120,6 +120,16 @@ public class MainActivity extends ActionBarActivity {
                     cursor.close();
                 }
             });
+
+            Button showMapButton = (Button) rootView.findViewById(R.id.show_map);
+            showMapButton.setOnClickListener(new View.OnClickListener() {
+
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(getActivity(), LocationHistoryActivity.class);
+                    startActivity(intent);
+                }
+            });
             return rootView;
         }
     }

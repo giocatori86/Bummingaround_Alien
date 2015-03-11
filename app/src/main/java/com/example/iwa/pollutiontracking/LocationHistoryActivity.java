@@ -1,16 +1,35 @@
 package com.example.iwa.pollutiontracking;
 
+import android.content.Context;
+import android.database.Cursor;
+import android.location.Location;
+import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.util.AttributeSet;
+import android.util.Log;
+import android.view.View;
 
+import com.example.iwa.pollutiontracking.data.PollutionTrackingContract;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+
+import java.util.Vector;
 
 public class LocationHistoryActivity extends FragmentActivity {
 
+    private static final String TAG = "LocationHistoryActivity";
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
+    private Vector<LatLng> coordinateVector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +72,68 @@ public class LocationHistoryActivity extends FragmentActivity {
         }
     }
 
+    private Vector<LatLng> addPointsOnMap() {
+        Log.v(TAG, "loading all position from the DB into the map");
+        Cursor cursor = getContentResolver().query(
+                PollutionTrackingContract.LocationEntry.CONTENT_URI,
+                new String[]{
+                        PollutionTrackingContract.LocationEntry._ID,
+                        PollutionTrackingContract.LocationEntry.COLUMN_COORD_LAT,
+                        PollutionTrackingContract.LocationEntry.COLUMN_COORD_LONG,
+                        PollutionTrackingContract.LocationEntry.COLUMN_PRECISION,
+                        PollutionTrackingContract.LocationEntry.COLUMN_TIMESTAMP,
+                },
+                null,
+                null,
+                null
+        );
+
+        Vector<LatLng> coordinateVector = new Vector<>();
+
+        while (cursor.moveToNext()) {
+            Log.v(TAG, "position id(" + cursor.getInt(0) + "), " +
+                    "lat(" + cursor.getFloat(1) + "), " +
+                    "long(" + cursor.getFloat(2) + "), " +
+                    "precision(" + cursor.getFloat(3) + "), " +
+                    "timestamp(" + cursor.getInt(4) + ")" );
+
+            Location location = new Location(PollutionTrackingContract.LocationEntry.CONTENT_URI.toString());
+            location.setLatitude(cursor.getFloat(1));
+            location.setLongitude(cursor.getFloat(2));
+            location.setAccuracy(cursor.getInt(3));
+            location.setTime(cursor.getInt(4));
+
+            LatLng markerCenter = new LatLng(
+                    location.getLatitude(),
+                    location.getLongitude()
+            );
+            coordinateVector.add(markerCenter);
+
+            mMap.addMarker(new MarkerOptions()
+                            .position(markerCenter)
+                            .title(String.valueOf(location.getTime()))
+            );
+
+            /*
+            mMap.addCircle(new CircleOptions()
+                    .center(markerCenter)
+                    .radius(location.getAccuracy())
+                    .fillColor(R.color.accent_material_light)
+                    .strokeColor(android.R.color.transparent)
+            );
+            */
+        }
+
+        mMap.addPolyline(new PolylineOptions()
+                        .addAll(coordinateVector)
+                        .color(R.color.accent_material_light)
+        );
+
+        cursor.close();
+
+        return coordinateVector;
+    }
+
     /**
      * This is where we can add markers or lines, add listeners or move the camera. In this case, we
      * just add a marker near Africa.
@@ -60,6 +141,29 @@ public class LocationHistoryActivity extends FragmentActivity {
      * This should only be called once and when we are sure that {@link #mMap} is not null.
      */
     private void setUpMap() {
-        mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker"));
+        coordinateVector = addPointsOnMap();
+
+        mMap.setMyLocationEnabled(true);
+
+        mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+            @Override
+            public void onMapLoaded() {
+                centerMapOnMarkers();
+            }
+        });
     }
+
+    private void centerMapOnMarkers() {
+        //Calculate the markers to get their position
+        LatLngBounds.Builder b = new LatLngBounds.Builder();
+        for (LatLng latLng : coordinateVector) {
+            b.include(latLng);
+        }
+        LatLngBounds bounds = b.build();
+        //Change the padding as per needed
+        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, 100);
+        mMap.animateCamera(cu);
+
+    }
+
 }
