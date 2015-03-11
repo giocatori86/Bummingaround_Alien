@@ -106,7 +106,7 @@ public class MainActivity extends ActionBarActivity {
                             },
                             null,
                             null,
-                            null
+                            PollutionTrackingContract.LocationEntry.COLUMN_TIMESTAMP
                     );
 
                     while (cursor.moveToNext()) {
@@ -114,7 +114,7 @@ public class MainActivity extends ActionBarActivity {
                                 "lat(" + cursor.getFloat(1) + "), " +
                                 "long(" + cursor.getFloat(2) + "), " +
                                 "precision(" + cursor.getFloat(3) + "), " +
-                                "timestamp(" + cursor.getInt(4) + ")" );
+                                "timestamp(" + cursor.getLong(4) + ")" );
                     }
 
                     cursor.close();

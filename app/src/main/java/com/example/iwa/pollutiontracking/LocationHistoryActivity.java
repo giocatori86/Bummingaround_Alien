@@ -85,7 +85,7 @@ public class LocationHistoryActivity extends FragmentActivity {
                 },
                 null,
                 null,
-                null
+                PollutionTrackingContract.LocationEntry.COLUMN_TIMESTAMP
         );
 
         Vector<LatLng> coordinateVector = new Vector<>();
@@ -95,13 +95,13 @@ public class LocationHistoryActivity extends FragmentActivity {
                     "lat(" + cursor.getFloat(1) + "), " +
                     "long(" + cursor.getFloat(2) + "), " +
                     "precision(" + cursor.getFloat(3) + "), " +
-                    "timestamp(" + cursor.getInt(4) + ")" );
+                    "timestamp(" + cursor.getLong(4) + ")" );
 
             Location location = new Location(PollutionTrackingContract.LocationEntry.CONTENT_URI.toString());
             location.setLatitude(cursor.getFloat(1));
             location.setLongitude(cursor.getFloat(2));
             location.setAccuracy(cursor.getInt(3));
-            location.setTime(cursor.getInt(4));
+            location.setTime(cursor.getLong(4));
 
             LatLng markerCenter = new LatLng(
                     location.getLatitude(),
