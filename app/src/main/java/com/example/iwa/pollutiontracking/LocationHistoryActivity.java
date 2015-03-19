@@ -109,10 +109,10 @@ public class LocationHistoryActivity extends FragmentActivity {
             );
             coordinateVector.add(markerCenter);
 
-            mMap.addMarker(new MarkerOptions()
+            /*mMap.addMarker(new MarkerOptions()
                             .position(markerCenter)
                             .title(String.valueOf(location.getTime()))
-            );
+            );*/
 
             /*
             mMap.addCircle(new CircleOptions()
