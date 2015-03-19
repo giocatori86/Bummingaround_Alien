@@ -13,6 +13,7 @@ import android.support.annotation.NonNull;
  */
 public class PollutionTrackingProvider extends ContentProvider {
     private static final int LOCATION = 100;
+    private static final int VENUE = 200;
 
     // The URI Matcher used by this content provider.
     private static final UriMatcher sUriMatcher = buildUriMatcher();
@@ -28,6 +29,7 @@ public class PollutionTrackingProvider extends ContentProvider {
         final String authority = PollutionTrackingContract.CONTENT_AUTHORITY;
 
         matcher.addURI(authority, PollutionTrackingContract.PATH_LOCATION, LOCATION);
+        matcher.addURI(authority, PollutionTrackingContract.PATH_VENUE, VENUE);
 
         return matcher;
     }
@@ -57,6 +59,19 @@ public class PollutionTrackingProvider extends ContentProvider {
                 );
                 break;
 
+            case VENUE:
+                retCursor = mOpenHelper.getReadableDatabase().query(
+                        PollutionTrackingContract.VenueEntry.TABLE_NAME,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        null,
+                        null,
+                        sortOrder
+                );
+                break;
+
+
             default:
                 throw new UnsupportedOperationException("Unknown uri: " + uri);
         }
@@ -72,6 +87,8 @@ public class PollutionTrackingProvider extends ContentProvider {
         switch (match) {
             case LOCATION:
                 return PollutionTrackingContract.LocationEntry.CONTENT_TYPE;
+            case VENUE:
+                return PollutionTrackingContract.VenueEntry.CONTENT_TYPE;
             default:
                 throw new UnsupportedOperationException("Unknown uri: " + uri);
         }
@@ -92,6 +109,15 @@ public class PollutionTrackingProvider extends ContentProvider {
                     throw new android.database.SQLException("Failed to insert row into " + uri);
                 break;
             }
+            case VENUE: {
+                long _id = db.insert(PollutionTrackingContract.VenueEntry.TABLE_NAME, null, values);
+                if (_id > 0)
+                    returnUri = PollutionTrackingContract.VenueEntry.buildLocationUri(_id);
+                else
+                    throw new android.database.SQLException("Failed to insert row into " + uri);
+                break;
+            }
+
             default:
                 throw new UnsupportedOperationException("Unknown uri: " + uri);
         }
@@ -111,6 +137,9 @@ public class PollutionTrackingProvider extends ContentProvider {
 
             case LOCATION:
                 deletedRows = db.delete(PollutionTrackingContract.LocationEntry.TABLE_NAME, selection, selectionArgs);
+                break;
+            case VENUE:
+                deletedRows = db.delete(PollutionTrackingContract.VenueEntry.TABLE_NAME, selection, selectionArgs);
                 break;
 
             default:
@@ -135,6 +164,10 @@ public class PollutionTrackingProvider extends ContentProvider {
 
             case LOCATION:
                 affectedRows = db.update(PollutionTrackingContract.LocationEntry.TABLE_NAME, values, selection, selectionArgs);
+                break;
+
+            case VENUE:
+                affectedRows = db.update(PollutionTrackingContract.VenueEntry.TABLE_NAME, values, selection, selectionArgs);
                 break;
 
             default:
