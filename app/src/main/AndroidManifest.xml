@@ -76,6 +76,11 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.iwa.pollutiontracking.MainActivity" />
         </activity>
+
+        <service
+            android:name=".BummingDataService"
+            android:exported="false" >
+        </service>
     </application>
 
 </manifest>
