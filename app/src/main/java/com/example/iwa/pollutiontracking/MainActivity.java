@@ -2,6 +2,7 @@ package com.example.iwa.pollutiontracking;
 
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.PointF;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
@@ -16,6 +17,8 @@ import android.widget.CompoundButton;
 import android.widget.ToggleButton;
 
 import com.example.iwa.pollutiontracking.data.PollutionTrackingContract;
+
+import java.util.ArrayList;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -94,7 +97,7 @@ public class MainActivity extends ActionBarActivity {
 
                 @Override
                 public void onClick(View v) {
-                    Log.v(TAG, "logging all the postions in the DB");
+                    Log.v(TAG, "logging all positions in the DB");
                     Cursor cursor = getActivity().getContentResolver().query(
                             PollutionTrackingContract.LocationEntry.CONTENT_URI,
                             new String[]{
@@ -128,6 +131,52 @@ public class MainActivity extends ActionBarActivity {
                 public void onClick(View v) {
                     Intent intent = new Intent(getActivity(), LocationHistoryActivity.class);
                     startActivity(intent);
+                }
+            });
+
+            Button searchVenuesButton = (Button) rootView.findViewById(R.id.search_venues);
+            searchVenuesButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ArrayList<Integer> pathIds = new ArrayList<>();
+                    pathIds.add(1);
+                    //points[0] = new PointF(52.364822f, 4.881493f);
+
+                    BummingDataService.StartDownloadVenues(getActivity(), pathIds);
+                }
+            });
+
+            Button logVenuesButton = (Button) rootView.findViewById(R.id.log_venues_from_db);
+            logVenuesButton.setOnClickListener(new View.OnClickListener() {
+
+                @Override
+                public void onClick(View v) {
+                    Log.v(TAG, "logging all venues in the DB");
+                    Cursor cursor = getActivity().getContentResolver().query(
+                            PollutionTrackingContract.VenueEntry.CONTENT_URI,
+                            new String[]{
+                                    PollutionTrackingContract.VenueEntry._ID,
+                                    PollutionTrackingContract.VenueEntry.COLUMN_URI,
+                                    PollutionTrackingContract.VenueEntry.COLUMN_NAME,
+                                    PollutionTrackingContract.VenueEntry.COLUMN_ADDRESS,
+                                    PollutionTrackingContract.VenueEntry.COLUMN_COORD_LAT,
+                                    PollutionTrackingContract.VenueEntry.COLUMN_COORD_LONG,
+                            },
+                            null,
+                            null,
+                            PollutionTrackingContract.VenueEntry.COLUMN_URI
+                    );
+
+                    while (cursor.moveToNext()) {
+                        Log.v(TAG, "venue id(" + cursor.getInt(0) + "), " +
+                                "uri(" + cursor.getFloat(1) + "), " +
+                                "name(" + cursor.getString(2) + "), " +
+                                "address(" + cursor.getString(3) + "), " +
+                                "lat(" + cursor.getFloat(4) + "), " +
+                                "long(" + cursor.getFloat(5) + "), " );
+                    }
+
+                    cursor.close();
                 }
             });
             return rootView;

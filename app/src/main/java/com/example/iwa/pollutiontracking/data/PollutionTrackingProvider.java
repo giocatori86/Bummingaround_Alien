@@ -1,6 +1,7 @@
 package com.example.iwa.pollutiontracking.data;
 
 import android.content.ContentProvider;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
@@ -13,6 +14,7 @@ import android.support.annotation.NonNull;
  */
 public class PollutionTrackingProvider extends ContentProvider {
     private static final int LOCATION = 100;
+    private static final int LOCATION_ID = 101;
     private static final int VENUE = 200;
 
     // The URI Matcher used by this content provider.
@@ -29,6 +31,8 @@ public class PollutionTrackingProvider extends ContentProvider {
         final String authority = PollutionTrackingContract.CONTENT_AUTHORITY;
 
         matcher.addURI(authority, PollutionTrackingContract.PATH_LOCATION, LOCATION);
+        matcher.addURI(authority, PollutionTrackingContract.PATH_LOCATION + "/#", LOCATION_ID);
+
         matcher.addURI(authority, PollutionTrackingContract.PATH_VENUE, VENUE);
 
         return matcher;
@@ -53,6 +57,17 @@ public class PollutionTrackingProvider extends ContentProvider {
                         projection,
                         selection,
                         selectionArgs,
+                        null,
+                        null,
+                        sortOrder
+                );
+                break;
+            case LOCATION_ID:
+                retCursor = mOpenHelper.getReadableDatabase().query(
+                        PollutionTrackingContract.LocationEntry.TABLE_NAME,
+                        projection,
+                        PollutionTrackingContract.LocationEntry._ID + " = '" + ContentUris.parseId(uri) + "'",
+                        null,
                         null,
                         null,
                         sortOrder
@@ -87,6 +102,8 @@ public class PollutionTrackingProvider extends ContentProvider {
         switch (match) {
             case LOCATION:
                 return PollutionTrackingContract.LocationEntry.CONTENT_TYPE;
+            case LOCATION_ID:
+                return PollutionTrackingContract.LocationEntry.CONTENT_ITEM_TYPE;
             case VENUE:
                 return PollutionTrackingContract.VenueEntry.CONTENT_TYPE;
             default:

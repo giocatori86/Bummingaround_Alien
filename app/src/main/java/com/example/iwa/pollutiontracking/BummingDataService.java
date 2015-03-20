@@ -4,12 +4,19 @@ import android.app.IntentService;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.PointF;
 import android.net.Uri;
 import android.util.Log;
 
 import com.example.iwa.pollutiontracking.data.PollutionTrackingContract;
 
+import org.apache.http.Header;
+import org.apache.http.HttpEntityEnclosingRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -22,7 +29,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Vector;
 
@@ -46,9 +55,9 @@ public class BummingDataService extends IntentService {
      *
      * @see IntentService
      */
-    public static void StartDownloadVenues(Context context, PointF[] path) {
+    public static void StartDownloadVenues(Context context, ArrayList<Integer> pathIDs) {
         Intent intent = new Intent(context, BummingDataService.class);
-        intent.putExtra(EXTRA_PATH, path);
+        intent.putIntegerArrayListExtra(EXTRA_PATH, pathIDs);
         context.startService(intent);
     }
 
@@ -59,25 +68,59 @@ public class BummingDataService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         if (intent != null) {
-            final PointF[] path = (PointF[]) intent.getParcelableArrayExtra(EXTRA_PATH);
+            final ArrayList<Integer> pathIDs = intent.getIntegerArrayListExtra(EXTRA_PATH);
+            final List<PointF> path = getPathFromIds(pathIDs);
             handlePoints(path);
         }
     }
 
+    private List<PointF> getPathFromIds(List<Integer> pathIds) {
+        List<PointF> path = new ArrayList<>(pathIds.size());
+        for (int id: pathIds) {
+            float lat, lon;
+
+            Cursor cursor = getContentResolver().query(
+                    PollutionTrackingContract.LocationEntry.buildLocationUri(id),
+                    new String[]{
+                            PollutionTrackingContract.LocationEntry._ID,
+                            PollutionTrackingContract.LocationEntry.COLUMN_COORD_LAT,
+                            PollutionTrackingContract.LocationEntry.COLUMN_COORD_LONG,
+                    },
+                    null,
+                    null,
+                    PollutionTrackingContract.LocationEntry.COLUMN_TIMESTAMP
+            );
+
+            if (BuildConfig.DEBUG && cursor.getCount() != 1)
+                throw new AssertionError("cursor count (" + cursor.getCount() + ") cannot be different than 1");
+
+
+            cursor.moveToNext();
+            lat = cursor.getFloat(1);
+            lon = cursor.getFloat(2);
+            cursor.close();
+
+            path.add(new PointF(lat, lon));
+        }
+        return path;
+    }
+
     /**
      * Handle the path download in the provided background thread.
+     * @param path
      */
-    private void handlePoints(PointF[] path) {
+    private void handlePoints(List<PointF> path) {
 
         //TODO delete all old venues
 
         List<String> result = downloadVenues(path);
-        for (String line: result) {
-            Log.i(LOG_TAG, line);
-        }
+        if (result != null)
+            for (String line: result)
+                Log.i(LOG_TAG, line);
     }
 
-    private JSONObject createPayload(PointF[] path) throws JSONException {
+    private JSONObject createPayload(List<PointF> path) throws JSONException {
+
         JSONArray jPath = new JSONArray();
         for (PointF point: path) {
             JSONObject jpoint = new JSONObject();
@@ -91,10 +134,10 @@ public class BummingDataService extends IntentService {
         return payload;
     }
 
-    private List<String> downloadVenues(PointF[] path) {
+    private List<String> downloadVenues(List<PointF> path) {
 
         // If there's no zip code, there's nothing to look up.  Verify size of params.
-        if (path.length == 0) {
+        if (path.size() == 0) {
             return null;
         }
 
@@ -107,26 +150,34 @@ public class BummingDataService extends IntentService {
         String venuesJsonStr = null;
 
         try {
-            Uri builtUri = Uri.parse(FIND_PLACES_URL);
 
-            URL url = new URL(builtUri.toString());
+            HttpPost httpPost = new HttpPost(FIND_PLACES_URL);
+            InputStream inputStream;
+            try {
+                JSONObject json = createPayload(path);
+                if (json != null){
+                    // Set json to StringEntity
+                    StringEntity se = new StringEntity(json.toString());
 
-            // Create the request to OpenWeatherMap, and open the connection
-            urlConnection = (HttpURLConnection) url.openConnection();
-            urlConnection.setRequestMethod("POST");
-            urlConnection.setUseCaches(false);
-            urlConnection.setRequestProperty("Content-Type", "application/json");
-            urlConnection.connect();
+                    // Set httpPost Entity
+                    httpPost.setEntity(se);
+                }
+                // Set some headers to inform server about the type of the content
+                httpPost.setHeader("Accept", "application/json");
+                httpPost.setHeader("Content-type", "application/json");
 
-            // Create post json object
-            JSONObject jsonPayload = createPayload(path);
-            DataOutputStream printout = new DataOutputStream(urlConnection.getOutputStream());
-            printout.writeChars(URLEncoder.encode(jsonPayload.toString(), "UTF-8"));
-            printout.flush();
-            printout.close();
+                // Execute POST request to the given URL
+                HttpResponse httpResponse = (new DefaultHttpClient()).execute(httpPost);
+
+                Header[] headers = httpResponse.getHeaders("Set-Cookie");
+                inputStream = httpResponse.getEntity().getContent();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
 
             // Read the input stream into a String
-            InputStream inputStream = urlConnection.getInputStream();
             StringBuilder buffer = new StringBuilder();
             if (inputStream == null) {
                 // Nothing to do.

@@ -91,11 +91,11 @@ public class LocationHistoryActivity extends FragmentActivity {
         Vector<LatLng> coordinateVector = new Vector<>();
 
         while (cursor.moveToNext()) {
-            Log.v(TAG, "position id(" + cursor.getInt(0) + "), " +
+            /*Log.v(TAG, "position id(" + cursor.getInt(0) + "), " +
                     "lat(" + cursor.getFloat(1) + "), " +
                     "long(" + cursor.getFloat(2) + "), " +
                     "precision(" + cursor.getFloat(3) + "), " +
-                    "timestamp(" + cursor.getLong(4) + ")" );
+                    "timestamp(" + cursor.getLong(4) + ")" );*/
 
             Location location = new Location(PollutionTrackingContract.LocationEntry.CONTENT_URI.toString());
             location.setLatitude(cursor.getFloat(1));
