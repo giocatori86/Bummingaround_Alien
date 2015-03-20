@@ -209,8 +209,14 @@ public class LocationHistoryActivity extends FragmentActivity {
                 new ContentObserver(null) {
                     @Override
                     public void onChange(boolean selfChange) {
-                        mMap.clear();
-                        setUpMap();
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mMap.clear();
+                                loadPath();
+                                addVenues();
+                            }
+                        });
                     }
                 }
         );
