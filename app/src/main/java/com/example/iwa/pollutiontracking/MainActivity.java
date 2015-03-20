@@ -142,7 +142,8 @@ public class MainActivity extends ActionBarActivity {
                     pathIds.add(1);
                     //points[0] = new PointF(52.364822f, 4.881493f);
 
-                    BummingDataService.StartDownloadVenues(getActivity(), pathIds);
+                    //BummingDataService.StartDownloadVenues(getActivity(), pathIds);
+                    BummingDataService.StartDownloadVenues(getActivity());
                 }
             });
 

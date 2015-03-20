@@ -61,6 +61,12 @@ public class BummingDataService extends IntentService {
         context.startService(intent);
     }
 
+    public static void StartDownloadVenues(Context context) {
+        Intent intent = new Intent(context, BummingDataService.class);
+        intent.putIntegerArrayListExtra(EXTRA_PATH, new ArrayList<Integer>());
+        context.startService(intent);
+    }
+
     public BummingDataService() {
         super("BummingDataService");
     }
@@ -76,7 +82,31 @@ public class BummingDataService extends IntentService {
 
     private List<PointF> getPathFromIds(List<Integer> pathIds) {
         List<PointF> path = new ArrayList<>(pathIds.size());
-        for (int id: pathIds) {
+
+        if (pathIds.size() == 0) {
+
+            Cursor cursor = getContentResolver().query(
+                    PollutionTrackingContract.LocationEntry.CONTENT_URI,
+                    new String[]{
+                            PollutionTrackingContract.LocationEntry.COLUMN_COORD_LAT,
+                            PollutionTrackingContract.LocationEntry.COLUMN_COORD_LONG,
+                    },
+                    null,
+                    null,
+                    PollutionTrackingContract.LocationEntry.COLUMN_TIMESTAMP
+            );
+
+
+            while(cursor.moveToNext()) {
+                float lat, lon;
+                lat = cursor.getFloat(0);
+                lon = cursor.getFloat(1);
+                path.add(new PointF(lat, lon));
+            }
+
+            cursor.close();
+
+        } else for (int id: pathIds) {
             float lat, lon;
 
             Cursor cursor = getContentResolver().query(
@@ -105,18 +135,30 @@ public class BummingDataService extends IntentService {
         return path;
     }
 
+
+    private void deleteOldVenues() {
+        getContentResolver().delete(PollutionTrackingContract.VenueEntry.CONTENT_URI,
+                null,
+                null
+        );
+    }
+
     /**
      * Handle the path download in the provided background thread.
      * @param path
      */
     private void handlePoints(List<PointF> path) {
 
-        //TODO delete all old venues
+        // delete all old venues
+        deleteOldVenues();
 
-        List<String> result = downloadVenues(path);
-        if (result != null)
-            for (String line: result)
-                Log.i(LOG_TAG, line);
+        // get new data
+        for (PointF point: path) {
+            List<String> result = downloadVenues(point);
+            if (result != null)
+                for (String line : result)
+                    Log.i(LOG_TAG, line);
+        }
     }
 
     private JSONObject createPayload(List<PointF> path) throws JSONException {
@@ -132,6 +174,12 @@ public class BummingDataService extends IntentService {
         JSONObject payload = new JSONObject();
         payload.put("path", jPath);
         return payload;
+    }
+
+    private List<String> downloadVenues(PointF point) {
+        ArrayList<PointF> monoList = new ArrayList<>();
+        monoList.add(point);
+        return downloadVenues(monoList);
     }
 
     private List<String> downloadVenues(List<PointF> path) {

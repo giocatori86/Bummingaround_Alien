@@ -8,15 +8,18 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 /**
  * Created by matteo on 11/03/15.
  */
 public class PollutionTrackingProvider extends ContentProvider {
+    private static final String TAG = "PollutionTrackingProvid";
+
     private static final int LOCATION = 100;
     private static final int LOCATION_ID = 101;
-    private static final int VENUE = 200;
 
+    private static final int VENUE = 200;
     // The URI Matcher used by this content provider.
     private static final UriMatcher sUriMatcher = buildUriMatcher();
 
@@ -128,10 +131,13 @@ public class PollutionTrackingProvider extends ContentProvider {
             }
             case VENUE: {
                 long _id = db.insert(PollutionTrackingContract.VenueEntry.TABLE_NAME, null, values);
-                if (_id > 0)
+                if (_id > 0) {
                     returnUri = PollutionTrackingContract.VenueEntry.buildLocationUri(_id);
-                else
-                    throw new android.database.SQLException("Failed to insert row into " + uri);
+                } else {
+                    //throw new android.database.SQLException("Failed to insert row into " + uri + "\nvalues: " + values);
+                    Log.e(TAG, "Failed to insert row into " + uri + "\nvalues: " + values);
+                    return null;
+                }
                 break;
             }
 

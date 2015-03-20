@@ -1,25 +1,19 @@
 package com.example.iwa.pollutiontracking;
 
-import android.content.Context;
 import android.database.Cursor;
 import android.location.Location;
-import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import android.util.AttributeSet;
 import android.util.Log;
-import android.view.View;
 
 import com.example.iwa.pollutiontracking.data.PollutionTrackingContract;
+import com.example.iwa.pollutiontracking.data.Venue;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.CameraPosition;
-import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
@@ -30,6 +24,7 @@ public class LocationHistoryActivity extends FragmentActivity {
     private static final String TAG = "LocationHistoryActivity";
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private Vector<LatLng> coordinateVector;
+    private Vector<LatLng> venuesVector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,7 +67,60 @@ public class LocationHistoryActivity extends FragmentActivity {
         }
     }
 
-    private Vector<LatLng> addPointsOnMap() {
+    private Vector<LatLng> addVenues() {
+        Log.v(TAG, "loading all position from the DB into the map");
+        Cursor cursor = getContentResolver().query(
+                PollutionTrackingContract.VenueEntry.CONTENT_URI,
+                new String[]{
+                        PollutionTrackingContract.VenueEntry._ID,
+                        PollutionTrackingContract.VenueEntry.COLUMN_URI,
+                        PollutionTrackingContract.VenueEntry.COLUMN_NAME,
+                        PollutionTrackingContract.VenueEntry.COLUMN_ADDRESS,
+                        PollutionTrackingContract.VenueEntry.COLUMN_COORD_LAT,
+                        PollutionTrackingContract.VenueEntry.COLUMN_COORD_LONG,
+                },
+                null,
+                null,
+                PollutionTrackingContract.VenueEntry.COLUMN_URI
+        );
+
+        Vector<LatLng> coordinateVector = new Vector<>();
+
+        while (cursor.moveToNext()) {
+            /*Log.v(TAG, "position id(" + cursor.getInt(0) + "), " +
+                    "lat(" + cursor.getFloat(1) + "), " +
+                    "long(" + cursor.getFloat(2) + "), " +
+                    "precision(" + cursor.getFloat(3) + "), " +
+                    "timestamp(" + cursor.getLong(4) + ")" );*/
+
+            Venue venue = new Venue(
+                    cursor.getLong(0),
+                    cursor.getString(1),
+                    cursor.getString(2),
+                    cursor.getString(3),
+                    cursor.getFloat(4),
+                    cursor.getFloat(5)
+            );
+
+            LatLng markerCenter = new LatLng(
+                    venue.getLatitude(),
+                    venue.getLongitude()
+            );
+            coordinateVector.add(markerCenter);
+
+            mMap.addMarker(new MarkerOptions()
+                            .position(markerCenter)
+                            .title(String.valueOf(venue.getName()))
+            );
+
+        }
+
+        cursor.close();
+
+        return coordinateVector;
+    }
+
+    private Vector<LatLng> loadPath() {
         Log.v(TAG, "loading all position from the DB into the map");
         Cursor cursor = getContentResolver().query(
                 PollutionTrackingContract.LocationEntry.CONTENT_URI,
@@ -141,7 +189,8 @@ public class LocationHistoryActivity extends FragmentActivity {
      * This should only be called once and when we are sure that {@link #mMap} is not null.
      */
     private void setUpMap() {
-        coordinateVector = addPointsOnMap();
+        coordinateVector = loadPath();
+        venuesVector = addVenues();
 
         mMap.setMyLocationEnabled(true);
 
