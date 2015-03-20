@@ -68,6 +68,9 @@ public class BummingDataService extends IntentService {
      * Handle the path download in the provided background thread.
      */
     private void handlePoints(PointF[] path) {
+
+        //TODO delete all old venues
+
         List<String> result = downloadVenues(path);
         for (String line: result) {
             Log.i(LOG_TAG, line);
