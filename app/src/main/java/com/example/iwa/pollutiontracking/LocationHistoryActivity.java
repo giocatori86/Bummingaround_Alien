@@ -1,7 +1,9 @@
 package com.example.iwa.pollutiontracking;
 
+import android.database.ContentObserver;
 import android.database.Cursor;
 import android.location.Location;
+import android.os.Handler;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -200,6 +202,18 @@ public class LocationHistoryActivity extends FragmentActivity {
                 centerMapOnMarkers();
             }
         });
+
+        getContentResolver().registerContentObserver(
+                PollutionTrackingContract.VenueEntry.CONTENT_URI,
+                false,
+                new ContentObserver(null) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        mMap.clear();
+                        setUpMap();
+                    }
+                }
+        );
     }
 
     private void centerMapOnMarkers() {
